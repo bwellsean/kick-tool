@@ -23,16 +23,18 @@ export default async function handler(req, res) {
     if (eventType === "chat.message.sent") {
       const { message_id, broadcaster, sender, content } = req.body;
 
-      // Log to console
-      console.log(
-        `[${broadcaster.username}'s chat] ${sender.username}: ${content}`
-      );
+      // Log to console - use safe property access
+      const broadcasterName =
+        broadcaster?.username || broadcaster?.slug || "unknown";
+      const senderName = sender?.username || "unknown";
+
+      console.log(`[${broadcasterName}'s chat] ${senderName}: ${content}`);
 
       // Store the message
       const chatMessage = {
         id: message_id,
-        broadcaster: broadcaster.username,
-        username: sender.username,
+        broadcaster: broadcasterName,
+        username: senderName,
         message: content,
         timestamp: new Date().toISOString(),
       };

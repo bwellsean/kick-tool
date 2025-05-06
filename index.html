@@ -32,30 +32,39 @@
     let currentBroadcasterId = null;
 
     document.getElementById('find-channel').addEventListener('click', async () => {
-      const channelName = document.getElementById('channel-name').value;
-      if (!channelName) {
-        alert('Please enter a channel name');
-        return;
-      }
-
-      try {
-        const channel = await findChannelByName(channelName);
-        if (channel) {
-          currentBroadcasterId = channel.user_id;
-
-          document.getElementById('channel-info').innerHTML = `
-              <h2>${channel.user.username}</h2>
-              <p>Broadcaster ID: ${currentBroadcasterId}</p>
-              <p>Followers: ${channel.followers_count}</p>
-            `;
-
-          document.getElementById('subscribe').disabled = false;
+        const channelName = document.getElementById('channel-name').value;
+        if (!channelName) {
+          alert('Please enter a channel name');
+          return;
         }
-      } catch (error) {
-        console.error('Error:', error);
-        alert('Error finding channel');
-      }
-    });
+
+        try {
+          const channel = await findChannelByName(channelName);
+          if (channel) {
+            // Store the broadcaster ID for subscribing
+            currentBroadcasterId = channel.broadcaster_user_id;
+
+            // Display channel info using the correct structure
+            document.getElementById('channel-info').innerHTML = `
+        <h2>${channel.slug}</h2>
+        <p>Broadcaster ID: ${currentBroadcasterId}</p>
+        <p>Description: ${channel.channel_description || 'No description'}</p>
+        <p>Live: ${channel.stream?.is_live ? 'Yes' : 'No'}</p>
+        <p>Stream Title: ${channel.stream_title || 'No title'}</p>
+        <p>Category: ${channel.category?.name || 'No category'}</p>
+        ${channel.banner_picture ? `<img src="${channel.banner_picture}" style="max-width:100%">` : ''}
+      `;
+
+            document.getElementById('subscribe').disabled = false;
+          } else {
+            alert('Channel not found');
+            document.getElementById('channel-info').innerHTML = '<p>No channel found with that name.</p>';
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('Error finding channel');
+        }
+      });
 
     document.getElementById('subscribe').addEventListener('click', async () => {
       if (!currentBroadcasterId) {
