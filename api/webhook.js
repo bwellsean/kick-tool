@@ -4,30 +4,30 @@ import { addMessage } from "../message-store.js";
 // In-memory store for chat messages (use a database in production)
 let chatMessages = [];
 
+// Log webhook payloads to help debug
 export default async function handler(req, res) {
-  // Only allow POST method
+  // Log all request info to help debug
+  console.log("[WEBHOOK] Request received:", {
+    method: req.method,
+    headers: req.headers,
+    body: req.body,
+  });
+
   if (req.method !== "POST") {
+    console.log("[WEBHOOK] Non-POST request rejected");
     return res.status(405).json({ message: "Method not allowed" });
   }
 
   try {
-    // Get headers from the request
-    const messageId = req.headers["kick-event-message-id"];
-    const timestamp = req.headers["kick-event-message-timestamp"];
-    const signature = req.headers["kick-event-signature"];
     const eventType = req.headers["kick-event-type"];
+    console.log(`[WEBHOOK] Event type: ${eventType}`);
 
-    console.log(`Received webhook event: ${eventType}`);
-
-    // Process event based on type
+    // Create a debug log file
     if (eventType === "chat.message.sent") {
       const { message_id, broadcaster, sender, content } = req.body;
 
-      // Log the message
-      console.log(`Chat message received: ${sender?.username}: ${content}`);
-
-      // Store the message
-      addMessage({
+      // Create a more detailed log
+      const messageDetails = {
         id: message_id || `msg_${Date.now()}`,
         broadcaster_id: broadcaster?.user_id || broadcaster?.id || "unknown",
         broadcaster_name:
@@ -37,13 +37,26 @@ export default async function handler(req, res) {
         sender_display_name: sender?.username || "anonymous",
         content: content || "",
         timestamp: new Date().toISOString(),
+        received_at: new Date().toISOString(),
+      };
+
+      console.log(
+        "[WEBHOOK] Chat message received:",
+        JSON.stringify(messageDetails, null, 2)
+      );
+
+      // For testing - return message details in response
+      return res.status(200).json({
+        success: true,
+        message_processed: true,
+        message_details: messageDetails,
       });
     }
 
-    // Return success response
+    // Return success for other events
     return res.status(200).json({ success: true });
   } catch (error) {
-    console.error("Error processing webhook:", error);
+    console.error("[WEBHOOK] Error:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 }

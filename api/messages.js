@@ -1,14 +1,12 @@
 import { getMessages } from "../message-store.js";
 
-// This is an API endpoint that uses Server-Sent Events to push messages to clients
-
-// Store messages temporarily in memory (use a database in production)
-let chatMessages = [];
+// For now, store messages in memory just for testing
+let testMessages = [];
 
 export default function handler(req, res) {
   // Set CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   // Handle OPTIONS request (for CORS preflight)
@@ -17,40 +15,63 @@ export default function handler(req, res) {
   }
 
   if (req.method === "GET") {
-    try {
-      // Get broadcaster_id from query if available
-      const broadcasterId = req.query.broadcaster_id || null;
+    // Log the request for debugging
+    console.log("GET /api/messages", {
+      query: req.query,
+      headers: req.headers,
+    });
 
-      // Get messages from the store
-      const messages = getMessages(broadcasterId);
+    // For testing, return some demo messages if empty
+    const broadcasterId = req.query.broadcaster_id;
 
-      // Return JSON response
-      return res.status(200).json({
-        success: true,
-        count: messages.length,
-        messages: messages,
-      });
-    } catch (error) {
-      console.error("Error retrieving messages:", error);
-      return res.status(500).json({
-        success: false,
-        error: "Failed to retrieve messages",
+    if (testMessages.length === 0) {
+      // Add a test message to show the endpoint is working
+      const now = new Date();
+      testMessages.push({
+        id: `test_${Date.now()}`,
+        broadcaster_id: broadcasterId || "12345",
+        broadcaster_name: "test_broadcaster",
+        sender_name: "webhook_tester",
+        sender_display_name: "Webhook Tester",
+        content:
+          "This is a test message to check if the messages API is working.",
+        timestamp: now.toISOString(),
       });
     }
+
+    // Filter by broadcaster ID if provided
+    let messages = testMessages;
+    if (broadcasterId) {
+      messages = testMessages.filter(
+        (msg) => String(msg.broadcaster_id) === String(broadcasterId)
+      );
+    }
+
+    // Return the messages
+    return res.status(200).json({
+      success: true,
+      count: messages.length,
+      messages: messages,
+    });
   } else if (req.method === "POST") {
-    // This allows other endpoints to add messages
-    const { message } = req.body;
-    if (message) {
-      chatMessages.push(message);
-      // Limit stored messages to 100
-      if (chatMessages.length > 100) {
-        chatMessages.shift();
+    // Allow adding a message for testing
+    try {
+      const message = req.body;
+      if (message) {
+        console.log("POST /api/messages", { message });
+        testMessages.unshift(message);
+        if (testMessages.length > 100) {
+          testMessages = testMessages.slice(0, 100);
+        }
+        return res.status(200).json({ success: true });
+      } else {
+        return res.status(400).json({ error: "No message provided" });
       }
-      res.status(200).json({ success: true });
-    } else {
-      res.status(400).json({ error: "No message provided" });
+    } catch (error) {
+      console.error("Error adding message:", error);
+      return res.status(500).json({ error: "Server error" });
     }
   } else {
-    res.status(405).json({ error: "Method not allowed" });
+    return res.status(405).json({ error: "Method not allowed" });
   }
 }
