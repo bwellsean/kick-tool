@@ -1,5 +1,5 @@
 import { verify } from "crypto";
-import { getAccessToken, makeApiRequest } from "../app.js";
+import { addMessage } from "../message-store.js";
 
 // In-memory store for chat messages (use a database in production)
 let chatMessages = [];
@@ -24,31 +24,32 @@ export default async function handler(req, res) {
       const { message_id, broadcaster, sender, content } = req.body;
 
       // Log to console - use safe property access
+      const broadcasterId = broadcaster?.id || "unknown";
       const broadcasterName =
         broadcaster?.username || broadcaster?.slug || "unknown";
       const senderName = sender?.username || "unknown";
+      const senderDisplayName = sender?.username || "unknown";
 
-      console.log(`[${broadcasterName}'s chat] ${senderName}: ${content}`);
+      console.log(
+        `[${broadcasterName}'s chat] ${senderDisplayName}: ${content}`
+      );
 
-      // Store the message
-      const chatMessage = {
+      // Store the message in our message store
+      addMessage({
         id: message_id,
-        broadcaster: broadcasterName,
-        username: senderName,
-        message: content,
+        broadcaster_id: broadcasterId,
+        broadcaster_name: broadcasterName,
+        sender_id: sender?.id || "anonymous",
+        sender_name: senderName,
+        sender_display_name: senderDisplayName,
+        content: content,
         timestamp: new Date().toISOString(),
-      };
-
-      chatMessages.push(chatMessage);
-
-      // Limit stored messages to 100
-      if (chatMessages.length > 100) {
-        chatMessages.shift();
-      }
+        received_at: new Date().toISOString(),
+      });
     }
 
     // Always return 200 OK for webhook requests
-    return res.status(200).json({ received: true });
+    return res.status(200).json({ success: true });
   } catch (error) {
     console.error("Error processing webhook:", error);
     return res.status(500).json({ error: "Internal server error" });
