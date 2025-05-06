@@ -68,11 +68,12 @@ async function makeApiRequest(endpoint, method = "GET", body = null) {
   }
 }
 
-// Export as ES modules
+// Export as ES modules only
 export { getAccessToken, makeApiRequest };
 
-// If you still need to run this file directly
-if (typeof require !== "undefined" && require.main === module) {
+// If you need to run this in a browser environment
+if (typeof window !== "undefined") {
+  // This code runs only in browser, not in Node.js
   async function init() {
     try {
       const livestreams = await makeApiRequest("livestreams");
@@ -82,8 +83,8 @@ if (typeof require !== "undefined" && require.main === module) {
     }
   }
 
-  init();
+  // Only run init if this script is loaded directly
+  if (document.currentScript && document.currentScript.src.includes("app.js")) {
+    init();
+  }
 }
-
-// At the end of your file:
-module.exports = { getAccessToken, makeApiRequest };
