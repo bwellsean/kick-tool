@@ -1,4 +1,5 @@
 import { verify } from "crypto";
+import { getAccessToken, makeApiRequest } from "../app.js";
 
 export default async function handler(req, res) {
   // Only allow POST method
