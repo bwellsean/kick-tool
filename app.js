@@ -35,20 +35,32 @@ async function getAccessToken() {
 }
 
 // Step 2: Use the token to make API requests
-async function makeApiRequest(endpoint, method = "GET") {
+// Update your existing makeApiRequest function to handle request bodies
+async function makeApiRequest(endpoint, method = "GET", body = null) {
   try {
     // First get the access token
     const accessToken = await getAccessToken();
 
-    // Then make the actual API request
-    const response = await fetch(`https://api.kick.com/public/v1/${endpoint}`, {
+    // Prepare request options
+    const options = {
       method: method,
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "*/*",
         "Content-Type": "application/json",
       },
-    });
+    };
+
+    // Add body for POST, PUT, PATCH requests
+    if (body && (method === "POST" || method === "PUT" || method === "PATCH")) {
+      options.body = JSON.stringify(body);
+    }
+
+    // Make the API request
+    const response = await fetch(
+      `https://api.kick.com/public/v1/${endpoint}`,
+      options
+    );
 
     if (!response.ok) {
       throw new Error(
@@ -75,3 +87,6 @@ async function init() {
 
 // Call the init function to start the app
 init();
+
+// Make sure to export the functions
+module.exports = { getAccessToken, makeApiRequest };
