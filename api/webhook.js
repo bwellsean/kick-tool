@@ -1,6 +1,9 @@
 import { verify } from "crypto";
 import { getAccessToken, makeApiRequest } from "../app.js";
 
+// In-memory store for chat messages (use a database in production)
+let chatMessages = [];
+
 export default async function handler(req, res) {
   // Only allow POST method
   if (req.method !== "POST") {
@@ -16,21 +19,30 @@ export default async function handler(req, res) {
 
     console.log(`Received ${eventType} event`);
 
-    // In production, verify the signature
-    // const isValid = verifySignature(messageId, timestamp, JSON.stringify(req.body), signature);
-    // if (!isValid) {
-    //   return res.status(401).json({ message: 'Invalid signature' });
-    // }
-
     // Process event based on type
     if (eventType === "chat.message.sent") {
       const { message_id, broadcaster, sender, content } = req.body;
+
+      // Log to console
       console.log(
         `[${broadcaster.username}'s chat] ${sender.username}: ${content}`
       );
 
-      // Store or process the message as needed
-      // You might want to use a database or websocket to deliver these messages
+      // Store the message
+      const chatMessage = {
+        id: message_id,
+        broadcaster: broadcaster.username,
+        username: sender.username,
+        message: content,
+        timestamp: new Date().toISOString(),
+      };
+
+      chatMessages.push(chatMessage);
+
+      // Limit stored messages to 100
+      if (chatMessages.length > 100) {
+        chatMessages.shift();
+      }
     }
 
     // Always return 200 OK for webhook requests
@@ -39,6 +51,11 @@ export default async function handler(req, res) {
     console.error("Error processing webhook:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
+}
+
+// Expose an endpoint to get messages
+export function getMessages() {
+  return [...chatMessages];
 }
 
 // Helper function to verify signature
