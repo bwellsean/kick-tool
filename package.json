@@ -1,13 +1,16 @@
 {
   "name": "kick-tool",
   "version": "1.0.0",
-  "description": "A tool for interacting with the Kick API",
-  "main": "app.js",
   "type": "module",
+  "private": true,
   "scripts": {
-    "start": "node app.js"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
   },
   "dependencies": {
-    "node-fetch": "^3.3.0"
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest"
   }
 }
