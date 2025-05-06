@@ -37,6 +37,8 @@ async function makeApiRequest(endpoint, method = "GET", body = null) {
   try {
     const accessToken = await getAccessToken();
 
+    console.log(`Making ${method} request to: ${endpoint}`);
+
     const options = {
       method: method,
       headers: {
@@ -48,6 +50,7 @@ async function makeApiRequest(endpoint, method = "GET", body = null) {
 
     if (body && (method === "POST" || method === "PUT" || method === "PATCH")) {
       options.body = JSON.stringify(body);
+      console.log("Request body:", JSON.stringify(body));
     }
 
     const response = await fetch(
@@ -55,13 +58,27 @@ async function makeApiRequest(endpoint, method = "GET", body = null) {
       options
     );
 
+    const responseText = await response.text();
+    let responseData;
+
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (e) {
+      console.log("Response is not JSON:", responseText);
+      responseData = { text: responseText };
+    }
+
     if (!response.ok) {
+      console.error(
+        `API request failed: ${response.status} ${response.statusText}`
+      );
+      console.error("Response data:", responseData);
       throw new Error(
         `API request failed: ${response.status} ${response.statusText}`
       );
     }
 
-    return await response.json();
+    return responseData;
   } catch (error) {
     console.error(`Error making API request to ${endpoint}:`, error);
     throw error;
