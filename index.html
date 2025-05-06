@@ -21,12 +21,20 @@
       <button id="clear-chat">Clear Chat</button>
     </div>
 
+    <div class="channel-status" id="channel-status">
+      <!-- Status will be shown here -->
+    </div>
+
     <div class="main-content">
       <div class="channel-info" id="channel-info">
         <p>Enter a channel name to get started</p>
       </div>
 
-      <div class="chat-container" id="chat-container">
+      <div class="chat-container">
+        <div class="chat-header">
+          <h3>Chat Messages</h3>
+          <span id="message-count">0 messages</span>
+        </div>
         <div class="chat-messages" id="chat-messages"></div>
       </div>
     </div>
@@ -43,7 +51,8 @@
     // Store current broadcaster ID
     let currentBroadcasterId = null;
     let pollingInterval = null;
-    let lastMessageId = null;
+    let lastMessageCount = 0;
+    let isSubscribed = false;
 
     // Setup event listeners
     document.getElementById('find-channel').addEventListener('click', findChannel);
@@ -57,11 +66,15 @@
         return;
       }
 
+      // Update status
+      updateStatus('Searching for channel...');
+
       try {
         const channel = await findChannelByName(channelName);
         if (channel) {
           currentBroadcasterId = channel.broadcaster_user_id;
 
+          // Update channel info
           document.getElementById('channel-info').innerHTML = `
             <h2>${channel.slug}</h2>
             <p>Broadcaster ID: ${currentBroadcasterId}</p>
@@ -72,21 +85,23 @@
             ${channel.banner_picture ? `<img src="${channel.banner_picture}" style="max-width:100%">` : ''}
           `;
 
+          // Enable subscribe button
           document.getElementById('subscribe').disabled = false;
 
-          // Clear existing messages and start fresh
+          // Clear existing messages
           document.getElementById('chat-messages').innerHTML = '';
-          lastMessageId = null;
+          lastMessageCount = 0;
+          updateStatus('Channel found! Click "Subscribe to Chat" to begin');
 
-          // Start polling for messages right away
+          // Start polling for messages
           startPollingMessages();
         } else {
-          alert('Channel not found');
+          updateStatus('Channel not found');
           document.getElementById('channel-info').innerHTML = '<p>No channel found with that name.</p>';
         }
       } catch (error) {
         console.error('Error:', error);
-        alert('Error finding channel');
+        updateStatus('Error finding channel');
       }
     }
 
@@ -96,88 +111,80 @@
         return;
       }
 
-      try {
-        await subscribeToChatEvents(currentBroadcasterId);
-        alert('Successfully subscribed to chat events!');
+      // Update status
+      updateStatus('Subscribing to chat events...');
+      document.getElementById('subscribe').disabled = true;
 
-        // Make sure we're polling for messages
+      try {
+        const response = await subscribeToChatEvents(currentBroadcasterId);
+        console.log('Subscription response:', response);
+
+        // Update UI
+        document.getElementById('subscribe').textContent = 'Subscribed ✓';
+        updateStatus('Subscribed to chat events!');
+        isSubscribed = true;
+
+        // Make sure polling is active
         startPollingMessages();
       } catch (error) {
         console.error('Error:', error);
-        alert('Error subscribing to chat: ' + error.message);
+        document.getElementById('subscribe').disabled = false;
+        updateStatus('Error subscribing to chat: ' + error.message);
       }
     }
 
     function clearChat() {
       document.getElementById('chat-messages').innerHTML = '';
-      lastMessageId = null;
+      lastMessageCount = 0;
+      document.getElementById('message-count').textContent = '0 messages';
+      updateStatus(isSubscribed ? 'Chat cleared' : 'Chat cleared. Not subscribed to events.');
     }
 
     function startPollingMessages() {
-      // Clear any existing polling
+      // Clear any existing interval
       if (pollingInterval) {
         clearInterval(pollingInterval);
       }
 
-      // Poll every 2 seconds
-      pollingInterval = setInterval(fetchMessages, 2000);
-
       // Initial fetch
       fetchMessages();
+
+      // Set up polling every 3 seconds
+      pollingInterval = setInterval(fetchMessages, 3000);
     }
 
     async function fetchMessages() {
+      if (!currentBroadcasterId) return;
+
       try {
+        // Build URL with broadcaster ID
         const url = new URL('/api/messages', window.location.origin);
+        url.searchParams.append('broadcaster_id', currentBroadcasterId);
 
-        // Add broadcaster ID if we have one
-        if (currentBroadcasterId) {
-          url.searchParams.append('broadcaster_id', currentBroadcasterId);
-        }
-
-        console.log(`Fetching messages from: ${url.toString()}`);
-
+        // Fetch messages
         const response = await fetch(url.toString());
+        const data = await response.json();
 
-        // Check if the response is OK
-        if (!response.ok) {
-          throw new Error(`HTTP error: ${response.status}`);
-        }
+        if (data.success) {
+          // Update message count
+          const count = data.count;
+          document.getElementById('message-count').textContent = `${count} message${count !== 1 ? 's' : ''}`;
 
-        // Try to parse the JSON response
-        const text = await response.text();
-        console.log(`Raw response: ${text.slice(0, 100)}...`); // Log the first 100 chars
+          // Check if there are new messages
+          if (count > lastMessageCount) {
+            // Get only the new messages
+            const newMessages = data.messages.slice(0, count - lastMessageCount);
 
-        let data;
-        try {
-          data = JSON.parse(text);
-        } catch (e) {
-          console.error(`JSON parse error: ${e.message}`);
-          console.error(`Response was: ${text}`);
-          return;
-        }
-
-        // Process messages if available
-        if (data.success && data.messages && data.messages.length > 0) {
-          console.log(`Received ${data.messages.length} messages`);
-
-          // Process only new messages
-          const messages = data.messages;
-          let newMessages = messages;
-
-          if (lastMessageId) {
-            // Filter to only show messages we haven't seen
-            newMessages = messages.filter(msg => msg.id !== lastMessageId &&
-                                          !document.querySelector(`[data-message-id="${msg.id}"]`));
-          }
-
-          if (newMessages.length > 0) {
-            console.log(`Adding ${newMessages.length} new messages`);
-            // Update last message ID
-            lastMessageId = messages[0].id;
-
-            // Add new messages to the chat
+            // Add new messages to chat
             newMessages.forEach(addMessageToChat);
+
+            // Update count
+            lastMessageCount = count;
+
+            // Update status if this is the first message
+            if (count === 1) {
+              updateStatus('First message received!');
+            }
           }
         }
       } catch (error) {
@@ -200,7 +207,7 @@
       // Create HTML content
       messageEl.innerHTML = `
         <span class="timestamp">[${timeStr}]</span>
-        <span class="username">${message.sender_display_name || message.sender_name}:</span>
+        <span class="username">${escapeHtml(message.sender_display_name || message.sender_name)}:</span>
         <span class="content">${escapeHtml(message.content)}</span>
       `;
 
@@ -211,7 +218,12 @@
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    // Helper to escape HTML in user content
+    function updateStatus(message) {
+      const statusEl = document.getElementById('channel-status');
+      statusEl.textContent = message;
+    }
+
+    // Helper to escape HTML
     function escapeHtml(unsafe) {
       return unsafe
         .replace(/&/g, "&amp;")
@@ -221,25 +233,8 @@
         .replace(/'/g, "&#039;");
     }
 
-    // Debug console output
-    const originalConsoleLog = console.log;
-    const originalConsoleError = console.error;
-
-    console.log = function (...args) {
-      originalConsoleLog.apply(console, args);
-      const debugDiv = document.getElementById('debug-output');
-      debugDiv.innerHTML += `<div class="log">${args.map(arg =>
-        typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ')}</div>`;
-      debugDiv.scrollTop = debugDiv.scrollHeight;
-    };
-
-    console.error = function (...args) {
-      originalConsoleError.apply(console, args);
-      const debugDiv = document.getElementById('debug-output');
-      debugDiv.innerHTML += `<div class="error">${args.map(arg =>
-        typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ')}</div>`;
-      debugDiv.scrollTop = debugDiv.scrollHeight;
-    };
+    // Initialize
+    updateStatus('Enter a channel name to get started');
   </script>
 </body>
 

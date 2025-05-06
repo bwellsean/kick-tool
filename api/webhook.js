@@ -4,59 +4,59 @@ import { addMessage } from "../message-store.js";
 // In-memory store for chat messages (use a database in production)
 let chatMessages = [];
 
-// Log webhook payloads to help debug
+// Webhook handler - receives events from Kick
 export default async function handler(req, res) {
-  // Log all request info to help debug
-  console.log("[WEBHOOK] Request received:", {
+  // Log all requests for debugging
+  console.log("Webhook request received:", {
     method: req.method,
-    headers: req.headers,
-    body: req.body,
+    headers: req.headers && {
+      event: req.headers["kick-event-type"],
+      version: req.headers["kick-event-version"],
+    },
   });
 
+  // Only allow POST requests
   if (req.method !== "POST") {
-    console.log("[WEBHOOK] Non-POST request rejected");
     return res.status(405).json({ message: "Method not allowed" });
   }
 
   try {
+    // Get the event type from headers
     const eventType = req.headers["kick-event-type"];
-    console.log(`[WEBHOOK] Event type: ${eventType}`);
 
-    // Create a debug log file
+    // Process chat messages
     if (eventType === "chat.message.sent") {
       const { message_id, broadcaster, sender, content } = req.body;
 
-      // Create a more detailed log
-      const messageDetails = {
+      console.log("Chat message received:", {
+        from: sender?.username || "unknown",
+        content: content,
+      });
+
+      // Format the message for storage
+      const message = {
         id: message_id || `msg_${Date.now()}`,
-        broadcaster_id: broadcaster?.user_id || broadcaster?.id || "unknown",
+        broadcaster_id: broadcaster?.user_id || broadcaster?.id,
         broadcaster_name:
           broadcaster?.username || broadcaster?.slug || "unknown",
-        sender_id: sender?.user_id || sender?.id || "anonymous",
+        sender_id: sender?.user_id || sender?.id,
         sender_name: sender?.username || "anonymous",
-        sender_display_name: sender?.username || "anonymous",
+        sender_display_name:
+          sender?.display_name || sender?.username || "anonymous",
         content: content || "",
         timestamp: new Date().toISOString(),
-        received_at: new Date().toISOString(),
       };
 
-      console.log(
-        "[WEBHOOK] Chat message received:",
-        JSON.stringify(messageDetails, null, 2)
-      );
+      // Store the message
+      addMessage(message);
 
-      // For testing - return message details in response
-      return res.status(200).json({
-        success: true,
-        message_processed: true,
-        message_details: messageDetails,
-      });
+      console.log(`Stored message from ${message.sender_name}`);
     }
 
-    // Return success for other events
+    // Always return success to acknowledge the webhook
     return res.status(200).json({ success: true });
   } catch (error) {
-    console.error("[WEBHOOK] Error:", error);
+    console.error("Error processing webhook:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 }
