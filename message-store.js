@@ -16,12 +16,32 @@ export function addMessage(message) {
 
 // Get all messages, optionally filtered by broadcaster
 export function getMessages(broadcasterId = null) {
-  if (broadcasterId) {
-    return chatMessages.filter(
-      (msg) => String(msg.broadcaster_id) === String(broadcasterId)
-    );
+  try {
+    // If we need to filter by broadcaster ID
+    if (broadcasterId) {
+      // Convert both to strings for comparison since IDs might be numbers or strings
+      const stringBroadcasterId = String(broadcasterId);
+
+      // Filter messages
+      const filteredMessages = chatMessages.filter((msg) => {
+        // Handle potential undefined broadcaster_id
+        if (!msg.broadcaster_id) return false;
+
+        return String(msg.broadcaster_id) === stringBroadcasterId;
+      });
+
+      console.log(
+        `Filtered messages for broadcaster ${broadcasterId}: ${filteredMessages.length} of ${chatMessages.length} total`
+      );
+      return filteredMessages;
+    }
+
+    // Return all messages
+    return [...chatMessages];
+  } catch (error) {
+    console.error("Error in getMessages:", error);
+    return [];
   }
-  return [...chatMessages];
 }
 
 // Clear all messages

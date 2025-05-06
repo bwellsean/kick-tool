@@ -161,22 +161,45 @@
         const url = new URL('/api/messages', window.location.origin);
         url.searchParams.append('broadcaster_id', currentBroadcasterId);
 
+        console.log(`Fetching messages from: ${url.toString()}`);
+
         // Fetch messages
         const response = await fetch(url.toString());
+
+        // Check if response is OK
+        if (!response.ok) {
+          throw new Error(`HTTP error: ${response.status}`);
+        }
+
+        // Parse the response
         const data = await response.json();
+
+        console.log(`Received messages response: ${JSON.stringify({
+          success: data.success,
+          count: data.count,
+          messagePreview: data.messages.length > 0 ?
+            `${data.messages[0].sender_name}: ${data.messages[0].content.substring(0, 30)}...` :
+            'No messages'
+        })}`);
 
         if (data.success) {
           // Update message count
           const count = data.count;
           document.getElementById('message-count').textContent = `${count} message${count !== 1 ? 's' : ''}`;
 
-          // Check if there are new messages
-          if (count > lastMessageCount) {
-            // Get only the new messages
-            const newMessages = data.messages.slice(0, count - lastMessageCount);
+          // If we have messages and the count has changed
+          if (count > 0 && count !== lastMessageCount) {
+            console.log(`New messages detected: ${count} (was ${lastMessageCount})`);
 
-            // Add new messages to chat
-            newMessages.forEach(addMessageToChat);
+            // Get all messages if this is the first time, otherwise just get new ones
+            const messagesToAdd = lastMessageCount === 0 ?
+              data.messages :
+              data.messages.slice(0, count - lastMessageCount);
+
+            console.log(`Adding ${messagesToAdd.length} messages to chat`);
+
+            // Add messages to chat
+            messagesToAdd.forEach(addMessageToChat);
 
             // Update count
             lastMessageCount = count;
@@ -185,10 +208,14 @@
             if (count === 1) {
               updateStatus('First message received!');
             }
+          } else if (count === 0 && lastMessageCount === 0) {
+            // Still no messages
+            console.log('No messages available yet');
           }
         }
       } catch (error) {
         console.error('Error fetching messages:', error);
+        updateStatus(`Error: ${error.message}`);
       }
     }
 
