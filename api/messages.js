@@ -1,29 +1,42 @@
+import { getMessages } from "../message-store.js";
+
 // This is an API endpoint that uses Server-Sent Events to push messages to clients
 
 // Store messages temporarily in memory (use a database in production)
 let chatMessages = [];
 
 export default function handler(req, res) {
+  // Set CORS headers
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  // Handle OPTIONS request (for CORS preflight)
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   if (req.method === "GET") {
-    // Set headers for SSE
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
+    try {
+      // Get broadcaster_id from query if available
+      const broadcasterId = req.query.broadcaster_id || null;
 
-    // Send current messages
-    const data = `data: ${JSON.stringify(chatMessages)}\n\n`;
-    res.write(data);
+      // Get messages from the store
+      const messages = getMessages(broadcasterId);
 
-    // Keep the connection open
-    const interval = setInterval(() => {
-      res.write(": ping\n\n");
-    }, 30000);
-
-    // Handle client disconnect
-    req.on("close", () => {
-      clearInterval(interval);
-      res.end();
-    });
+      // Return JSON response
+      return res.status(200).json({
+        success: true,
+        count: messages.length,
+        messages: messages,
+      });
+    } catch (error) {
+      console.error("Error retrieving messages:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Failed to retrieve messages",
+      });
+    }
   } else if (req.method === "POST") {
     // This allows other endpoints to add messages
     const { message } = req.body;

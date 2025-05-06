@@ -17,38 +17,30 @@ export default async function handler(req, res) {
     const signature = req.headers["kick-event-signature"];
     const eventType = req.headers["kick-event-type"];
 
-    console.log(`Received ${eventType} event`);
+    console.log(`Received webhook event: ${eventType}`);
 
     // Process event based on type
     if (eventType === "chat.message.sent") {
       const { message_id, broadcaster, sender, content } = req.body;
 
-      // Log to console - use safe property access
-      const broadcasterId = broadcaster?.id || "unknown";
-      const broadcasterName =
-        broadcaster?.username || broadcaster?.slug || "unknown";
-      const senderName = sender?.username || "unknown";
-      const senderDisplayName = sender?.username || "unknown";
+      // Log the message
+      console.log(`Chat message received: ${sender?.username}: ${content}`);
 
-      console.log(
-        `[${broadcasterName}'s chat] ${senderDisplayName}: ${content}`
-      );
-
-      // Store the message in our message store
+      // Store the message
       addMessage({
-        id: message_id,
-        broadcaster_id: broadcasterId,
-        broadcaster_name: broadcasterName,
-        sender_id: sender?.id || "anonymous",
-        sender_name: senderName,
-        sender_display_name: senderDisplayName,
-        content: content,
+        id: message_id || `msg_${Date.now()}`,
+        broadcaster_id: broadcaster?.user_id || broadcaster?.id || "unknown",
+        broadcaster_name:
+          broadcaster?.username || broadcaster?.slug || "unknown",
+        sender_id: sender?.user_id || sender?.id || "anonymous",
+        sender_name: sender?.username || "anonymous",
+        sender_display_name: sender?.username || "anonymous",
+        content: content || "",
         timestamp: new Date().toISOString(),
-        received_at: new Date().toISOString(),
       });
     }
 
-    // Always return 200 OK for webhook requests
+    // Return success response
     return res.status(200).json({ success: true });
   } catch (error) {
     console.error("Error processing webhook:", error);
