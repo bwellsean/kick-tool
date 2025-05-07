@@ -53,17 +53,7 @@ app.use(express.static(__dirname)); // Serve static files from root directory
 
 // Log all incoming requests
 app.use((req, res, next) => {
-  res.headers["Access-Control-Allow-Origin"] = "*";
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-  next();
-});
-
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*"); // Or specify your frontend URL instead of *
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept"
-  );
   next();
 });
 
