@@ -1,3 +1,7 @@
+// At the very top of server.js
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import cors from "cors";
 import fs from "fs";
@@ -22,12 +26,25 @@ console.log({
   updateMessageToxicity: typeof updateMessageToxicity,
 });
 
+// For API_KEY in perspective-client.js
+const API_KEY = process.env.PERSPECTIVE_API_KEY;
+
+// For MAX_MESSAGES in message-store.js
+const MAX_MESSAGES = parseInt(process.env.MAX_MESSAGES || 500);
+
+// For your webhook URLs in chat-subscriber.js
+const webhookUrl = process.env.RENDER_EXTERNAL_URL
+  ? `${process.env.RENDER_EXTERNAL_URL}/webhook`
+  : process.env.EXTERNAL_URL
+  ? `${process.env.EXTERNAL_URL}/webhook`
+  : "http://localhost:3000/webhook";
+
 // Setup for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
