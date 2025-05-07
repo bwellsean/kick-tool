@@ -12,8 +12,10 @@ async function subscribeToChatEvents(broadcasterId) {
       throw new Error(`Invalid broadcaster ID: ${broadcasterId}`);
     }
 
-    // The webhook URL must be publicly accessible
-    const webhookUrl = "https://kick-tool.vercel.app/api/webhook";
+    // Use the ngrok URL for webhooks
+    // Replace with your CURRENT ngrok URL (it changes each time you restart ngrok)
+    const webhookUrl = "https://81df-136-37-7-242.ngrok-free.app/webhook";
+    console.log(`Using webhook URL: ${webhookUrl}`);
 
     // Make the subscription request
     const response = await makeApiRequest("events/subscriptions", "POST", {
@@ -29,38 +31,6 @@ async function subscribeToChatEvents(broadcasterId) {
     });
 
     console.log("Subscription created:", JSON.stringify(response, null, 2));
-
-    // Make a test webhook call for debugging
-    try {
-      const testMessage = {
-        message_id: `test_${Date.now()}`,
-        broadcaster: {
-          user_id: numericBroadcasterId,
-          username: "test_broadcaster",
-        },
-        sender: {
-          user_id: 999999,
-          username: "test_sender",
-        },
-        content: "This is a test webhook message",
-      };
-
-      // Call our own webhook for testing
-      const webhookResponse = await fetch(webhookUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Kick-Event-Type": "chat.message.sent",
-          "Kick-Event-Version": "1",
-        },
-        body: JSON.stringify(testMessage),
-      });
-
-      console.log("Test webhook response:", await webhookResponse.text());
-    } catch (testError) {
-      console.error("Test webhook failed:", testError);
-    }
-
     return response;
   } catch (error) {
     console.error("Failed to subscribe to chat events:", error);

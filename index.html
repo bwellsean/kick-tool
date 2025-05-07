@@ -4,14 +4,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kick Chat Viewer</title>
+  <title>Toxicity Tracker</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
   <div class="container">
     <header>
-      <h1>Kick Chat Viewer</h1>
+      <h1>Toxicity Tracker</h1>
     </header>
 
     <div class="controls">
@@ -23,6 +23,26 @@
 
     <div class="channel-status" id="channel-status">
       <!-- Status will be shown here -->
+    </div>
+
+    <div class="stats-container">
+      <div class="toxicity-stats">
+        <h3>Average Chat Toxicity</h3>
+        <div class="toxicity-meter">
+          <div id="toxicity-bar" class="toxicity-bar" style="width: 0%;">0%</div>
+        </div>
+        <div id="average-toxicity">Average Toxicity: 0%</div>
+      </div>
+      <div class="toxic-user-stats">
+        <h3>Most Toxic User</h3>
+        <div id="toxic-user">No data yet</div>
+        <div id="toxic-message">No toxic messages detected</div>
+      </div>
+      <div class="positive-user-stats">
+        <h3>Most Positive User</h3>
+        <div id="positive-user">No data yet</div>
+        <div id="positive-message">No positive messages detected</div>
+      </div>
     </div>
 
     <div class="main-content">
@@ -39,43 +59,38 @@
       </div>
     </div>
 
-    <div id="debug-output" class="debug-output">
-      <h3>Debug Output</h3>
-    </div>
-  </div>
+    <script type="module">
+      import { findChannelByName } from './channel-finder.js';
+      import { subscribeToChatEvents } from './chat-subscriber.js';
 
-  <script type="module">
-    import { findChannelByName } from './channel-finder.js';
-    import { subscribeToChatEvents } from './chat-subscriber.js';
+      // Store current broadcaster ID
+      let currentBroadcasterId = null;
+      let pollingInterval = null;
+      let lastMessageCount = 0;
+      let isSubscribed = false;
 
-    // Store current broadcaster ID
-    let currentBroadcasterId = null;
-    let pollingInterval = null;
-    let lastMessageCount = 0;
-    let isSubscribed = false;
+      // Setup event listeners
+      document.getElementById('find-channel').addEventListener('click', findChannel);
+      document.getElementById('subscribe').addEventListener('click', subscribeToChat);
+      document.getElementById('clear-chat').addEventListener('click', clearChat);
 
-    // Setup event listeners
-    document.getElementById('find-channel').addEventListener('click', findChannel);
-    document.getElementById('subscribe').addEventListener('click', subscribeToChat);
-    document.getElementById('clear-chat').addEventListener('click', clearChat);
+      async function findChannel() {
+        const channelName = document.getElementById('channel-name').value;
+        if (!channelName) {
+          alert('Please enter a channel name');
+          return;
+        }
 
-    async function findChannel() {
-      const channelName = document.getElementById('channel-name').value;
-      if (!channelName) {
-        alert('Please enter a channel name');
-        return;
-      }
+        // Update status
+        updateStatus('Searching for channel...');
 
-      // Update status
-      updateStatus('Searching for channel...');
+        try {
+          const channel = await findChannelByName(channelName);
+          if (channel) {
+            currentBroadcasterId = channel.broadcaster_user_id;
 
-      try {
-        const channel = await findChannelByName(channelName);
-        if (channel) {
-          currentBroadcasterId = channel.broadcaster_user_id;
-
-          // Update channel info
-          document.getElementById('channel-info').innerHTML = `
+            // Update channel info
+            document.getElementById('channel-info').innerHTML = `
             <h2>${channel.slug}</h2>
             <p>Broadcaster ID: ${currentBroadcasterId}</p>
             <p>Description: ${channel.channel_description || 'No description'}</p>
@@ -85,184 +100,294 @@
             ${channel.banner_picture ? `<img src="${channel.banner_picture}" style="max-width:100%">` : ''}
           `;
 
-          // Enable subscribe button
-          document.getElementById('subscribe').disabled = false;
+            // Enable subscribe button
+            document.getElementById('subscribe').disabled = false;
 
-          // Clear existing messages
-          document.getElementById('chat-messages').innerHTML = '';
-          lastMessageCount = 0;
-          updateStatus('Channel found! Click "Subscribe to Chat" to begin');
+            // Clear existing messages
+            document.getElementById('chat-messages').innerHTML = '';
+            lastMessageCount = 0;
+            updateStatus('Channel found! Click "Subscribe to Chat" to begin');
 
-          // Start polling for messages
-          startPollingMessages();
-        } else {
-          updateStatus('Channel not found');
-          document.getElementById('channel-info').innerHTML = '<p>No channel found with that name.</p>';
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        updateStatus('Error finding channel');
-      }
-    }
-
-    async function subscribeToChat() {
-      if (!currentBroadcasterId) {
-        alert('No broadcaster selected');
-        return;
-      }
-
-      // Update status
-      updateStatus('Subscribing to chat events...');
-      document.getElementById('subscribe').disabled = true;
-
-      try {
-        const response = await subscribeToChatEvents(currentBroadcasterId);
-        console.log('Subscription response:', response);
-
-        // Update UI
-        document.getElementById('subscribe').textContent = 'Subscribed ✓';
-        updateStatus('Subscribed to chat events!');
-        isSubscribed = true;
-
-        // Make sure polling is active
-        startPollingMessages();
-      } catch (error) {
-        console.error('Error:', error);
-        document.getElementById('subscribe').disabled = false;
-        updateStatus('Error subscribing to chat: ' + error.message);
-      }
-    }
-
-    function clearChat() {
-      document.getElementById('chat-messages').innerHTML = '';
-      lastMessageCount = 0;
-      document.getElementById('message-count').textContent = '0 messages';
-      updateStatus(isSubscribed ? 'Chat cleared' : 'Chat cleared. Not subscribed to events.');
-    }
-
-    function startPollingMessages() {
-      // Clear any existing interval
-      if (pollingInterval) {
-        clearInterval(pollingInterval);
-      }
-
-      // Initial fetch
-      fetchMessages();
-
-      // Set up polling every 3 seconds
-      pollingInterval = setInterval(fetchMessages, 3000);
-    }
-
-    async function fetchMessages() {
-      if (!currentBroadcasterId) return;
-
-      try {
-        // Build URL with broadcaster ID
-        const url = new URL('/api/messages', window.location.origin);
-        url.searchParams.append('broadcaster_id', currentBroadcasterId);
-
-        console.log(`Fetching messages from: ${url.toString()}`);
-
-        // Fetch messages
-        const response = await fetch(url.toString());
-
-        // Check if response is OK
-        if (!response.ok) {
-          throw new Error(`HTTP error: ${response.status}`);
-        }
-
-        // Parse the response
-        const data = await response.json();
-
-        console.log(`Received messages response: ${JSON.stringify({
-          success: data.success,
-          count: data.count,
-          messagePreview: data.messages.length > 0 ?
-            `${data.messages[0].sender_name}: ${data.messages[0].content.substring(0, 30)}...` :
-            'No messages'
-        })}`);
-
-        if (data.success) {
-          // Update message count
-          const count = data.count;
-          document.getElementById('message-count').textContent = `${count} message${count !== 1 ? 's' : ''}`;
-
-          // If we have messages and the count has changed
-          if (count > 0 && count !== lastMessageCount) {
-            console.log(`New messages detected: ${count} (was ${lastMessageCount})`);
-
-            // Get all messages if this is the first time, otherwise just get new ones
-            const messagesToAdd = lastMessageCount === 0 ?
-              data.messages :
-              data.messages.slice(0, count - lastMessageCount);
-
-            console.log(`Adding ${messagesToAdd.length} messages to chat`);
-
-            // Add messages to chat
-            messagesToAdd.forEach(addMessageToChat);
-
-            // Update count
-            lastMessageCount = count;
-
-            // Update status if this is the first message
-            if (count === 1) {
-              updateStatus('First message received!');
-            }
-          } else if (count === 0 && lastMessageCount === 0) {
-            // Still no messages
-            console.log('No messages available yet');
+            // Start polling for messages
+            startPollingMessages();
+          } else {
+            updateStatus('Channel not found');
+            document.getElementById('channel-info').innerHTML = '<p>No channel found with that name.</p>';
           }
+        } catch (error) {
+          console.error('Error:', error);
+          updateStatus('Error finding channel');
         }
-      } catch (error) {
-        console.error('Error fetching messages:', error);
-        updateStatus(`Error: ${error.message}`);
       }
-    }
 
-    function addMessageToChat(message) {
-      const chatMessages = document.getElementById('chat-messages');
+      async function subscribeToChat() {
+        if (!currentBroadcasterId) {
+          alert('No broadcaster selected');
+          return;
+        }
 
-      // Create message element
-      const messageEl = document.createElement('div');
-      messageEl.className = 'chat-message';
-      messageEl.dataset.messageId = message.id;
+        // Update status
+        updateStatus('Subscribing to chat events...');
+        document.getElementById('subscribe').disabled = true;
 
-      // Format timestamp
-      const time = new Date(message.timestamp);
-      const timeStr = time.toLocaleTimeString();
+        try {
+          const response = await subscribeToChatEvents(currentBroadcasterId);
+          console.log('Subscription response:', response);
 
-      // Create HTML content
-      messageEl.innerHTML = `
+          // Update UI
+          document.getElementById('subscribe').textContent = 'Subscribed ✓';
+          updateStatus('Subscribed to chat events!');
+          isSubscribed = true;
+
+          // Make sure polling is active
+          startPollingMessages();
+        } catch (error) {
+          console.error('Error:', error);
+          document.getElementById('subscribe').disabled = false;
+          updateStatus('Error subscribing to chat: ' + error.message);
+        }
+      }
+
+      function clearChat() {
+        document.getElementById('chat-messages').innerHTML = '';
+        lastMessageCount = 0;
+        document.getElementById('message-count').textContent = '0 messages';
+        updateStatus(isSubscribed ? 'Chat cleared' : 'Chat cleared. Not subscribed to events.');
+      }
+
+      // Function to fetch toxicity stats
+      async function fetchToxicityStats() {
+        if (!currentBroadcasterId) return;
+
+        try {
+          // Use your ngrok URL
+          const url = new URL('https://81df-136-37-7-242.ngrok-free.app/api/toxicity-stats');
+          url.searchParams.append('broadcaster_id', currentBroadcasterId);
+
+          const response = await fetch(url.toString());
+          if (!response.ok) {
+            throw new Error(`HTTP error: ${response.status}`);
+          }
+
+          const data = await response.json();
+
+          if (data.success && data.stats) {
+            updateToxicityDisplay(data.stats);
+          }
+        } catch (error) {
+          console.error('Error fetching toxicity stats:', error);
+        }
+      }
+
+      // Function to update the toxicity display
+      function updateToxicityDisplay(stats) {
+        // Update average toxicity
+        const toxicityPercent = Math.round(stats.averageToxicity * 100);
+        document.getElementById('toxicity-bar').style.width = `${toxicityPercent}%`;
+        document.getElementById('toxicity-bar').textContent = `${toxicityPercent}%`;
+        document.getElementById('average-toxicity').textContent = `Average Toxicity: ${toxicityPercent}%`;
+
+        // Update most toxic user info
+        if (stats.mostToxicUser) {
+          const userToxicityPercent = Math.round(stats.mostToxicUser.averageToxicity * 100);
+          const messageToxicityPercent = Math.round(stats.mostToxicUser.mostToxicMessage.toxicity * 100);
+
+          document.getElementById('toxic-user').innerHTML = `
+            <strong>${escapeHtml(stats.mostToxicUser.username)}</strong>
+            <div>Average Toxicity: ${userToxicityPercent}% (${stats.mostToxicUser.messageCount} messages)</div>
+          `;
+
+          document.getElementById('toxic-message').innerHTML = `
+            <div>Most toxic message (${messageToxicityPercent}% toxic):</div>
+            <div>"${escapeHtml(stats.mostToxicUser.mostToxicMessage.content)}"</div>
+          `;
+        } else {
+          document.getElementById('toxic-user').textContent = "No toxic users detected";
+          document.getElementById('toxic-message').textContent = "No toxic messages detected";
+        }
+
+        // Update most positive user info
+        if (stats.mostPositiveUser) {
+          const userPositivityPercent = 100 - Math.round(stats.mostPositiveUser.averageToxicity * 100);
+          const messagePositivityPercent = 100 - Math.round(stats.mostPositiveUser.mostPositiveMessage.toxicity * 100);
+
+          document.getElementById('positive-user').innerHTML = `
+            <strong>${escapeHtml(stats.mostPositiveUser.username)}</strong>
+            <div>Positivity Score: ${userPositivityPercent}% (${stats.mostPositiveUser.messageCount} messages)</div>
+          `;
+
+          document.getElementById('positive-message').innerHTML = `
+            <div>Most positive message (${messagePositivityPercent}% positive):</div>
+            <div>"${escapeHtml(stats.mostPositiveUser.mostPositiveMessage.content)}"</div>
+          `;
+        } else {
+          document.getElementById('positive-user').textContent = "No positive users detected";
+          document.getElementById('positive-message').textContent = "No positive messages detected";
+        }
+      }
+
+      // Unified polling function for both messages and toxicity stats
+      function startPollingMessages() {
+        // Clear any existing interval
+        if (pollingInterval) {
+          clearInterval(pollingInterval);
+        }
+
+        // Initial fetch
+        fetchMessages();
+        fetchToxicityStats();
+
+        // Set up polling every 3 seconds for messages and 5 seconds for toxicity
+        pollingInterval = setInterval(() => {
+          fetchMessages();
+
+          // Only fetch toxicity stats every other time (approximately every 6 seconds)
+          // to avoid hitting API rate limits
+          if (Date.now() % 6000 < 3000) {
+            fetchToxicityStats();
+          }
+        }, 3000);
+      }
+
+      async function fetchMessages() {
+        if (!currentBroadcasterId) return;
+
+        try {
+          // Use your CURRENT ngrok URL (it changes each time you restart ngrok)
+          const url = new URL('https://81df-136-37-7-242.ngrok-free.app/api/messages');
+          url.searchParams.append('broadcaster_id', currentBroadcasterId);
+
+          console.log(`Fetching messages from: ${url.toString()}`);
+
+          // Fetch messages with proper error handling
+          const response = await fetch(url.toString());
+
+          // Check if response is OK
+          if (!response.ok) {
+            throw new Error(`HTTP error: ${response.status}`);
+          }
+
+          // Get the response text first for debugging
+          const responseText = await response.text();
+          console.log('Raw response:', responseText.substring(0, 100) + '...');
+
+          // Try to parse as JSON
+          let data;
+          try {
+            data = JSON.parse(responseText);
+          } catch (jsonError) {
+            console.error('JSON parse error:', jsonError);
+            console.error('Response was not valid JSON:', responseText);
+            throw jsonError;
+          }
+
+          // Continue with your existing code...
+          console.log(`Received messages response: ${JSON.stringify({
+            success: data.success,
+            count: data.count,
+            messagePreview: data.messages && data.messages.length > 0 ?
+              `${data.messages[0].sender_name}: ${data.messages[0].content.substring(0, 30)}...` :
+              'No messages'
+          })}`);
+
+          if (data.success) {
+            // Update message count
+            const count = data.count;
+            document.getElementById('message-count').textContent = `${count} message${count !== 1 ? 's' : ''}`;
+
+            // If we have messages and the count has changed
+            if (count > 0 && count !== lastMessageCount) {
+              console.log(`New messages detected: ${count} (was ${lastMessageCount})`);
+
+              // Get all messages if this is the first time, otherwise just get new ones
+              const messagesToAdd = lastMessageCount === 0 ?
+                data.messages :
+                data.messages.slice(0, count - lastMessageCount);
+
+              console.log(`Adding ${messagesToAdd.length} messages to chat`);
+
+              // Add messages to chat
+              messagesToAdd.forEach(addMessageToChat);
+
+              // Update count
+              lastMessageCount = count;
+
+              // Update status if this is the first message
+              if (count === 1) {
+                updateStatus('First message received!');
+              }
+            } else if (count === 0 && lastMessageCount === 0) {
+              // Still no messages
+              console.log('No messages available yet');
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching messages:', error);
+          updateStatus(`Error: ${error.message}`);
+        }
+      }
+
+      function addMessageToChat(message) {
+        const chatMessages = document.getElementById('chat-messages');
+
+        // Create message element
+        const messageEl = document.createElement('div');
+        messageEl.className = 'chat-message';
+        messageEl.dataset.messageId = message.id;
+
+        // Format timestamp
+        const time = new Date(message.timestamp);
+        const timeStr = time.toLocaleTimeString();
+
+        // Create HTML content
+        let messageHTML = `
         <span class="timestamp">[${timeStr}]</span>
         <span class="username">${escapeHtml(message.sender_display_name || message.sender_name)}:</span>
         <span class="content">${escapeHtml(message.content)}</span>
       `;
 
-      // Add to container
-      chatMessages.appendChild(messageEl);
+        // Add toxicity indicator if available
+        if (message.toxicity !== undefined) {
+          let indicatorClass = 'toxicity-indicator';
 
-      // Scroll to bottom
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
+          if (message.toxicity < 0.3) {
+            indicatorClass += ' toxicity-indicator-low';
+          } else if (message.toxicity < 0.7) {
+            indicatorClass += ' toxicity-indicator-medium';
+          } else {
+            indicatorClass += ' toxicity-indicator-high';
+          }
 
-    function updateStatus(message) {
-      const statusEl = document.getElementById('channel-status');
-      statusEl.textContent = message;
-    }
+          messageHTML += `<span class="${indicatorClass}" title="Toxicity: ${Math.round(message.toxicity * 100)}%"></span>`;
+        }
 
-    // Helper to escape HTML
-    function escapeHtml(unsafe) {
-      return unsafe
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
+        messageEl.innerHTML = messageHTML;
 
-    // Initialize
-    updateStatus('Enter a channel name to get started');
-  </script>
+        // Add to container
+        chatMessages.appendChild(messageEl);
+
+        // Scroll to bottom
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      function updateStatus(message) {
+        const statusEl = document.getElementById('channel-status');
+        statusEl.textContent = message;
+      }
+
+      // Helper to escape HTML
+      function escapeHtml(unsafe) {
+        return unsafe
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      // Initialize
+      updateStatus('Enter a channel name to get started');
+    </script>
 </body>
 
 </html>
