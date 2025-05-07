@@ -1,7 +1,6 @@
 // Authentication details
-const CLIENT_ID = "01JTJZZ3S45DZVTTND2Y1XXF07";
-const CLIENT_SECRET =
-  "a40d288be912b23eccf4912422ce0cd797ea57bffaf31d99b13764b95b970ee6";
+const CLIENT_ID = process.env.KICK_API_KEY;
+const CLIENT_SECRET = process.env.KICK_API_SECRET;
 
 // Step 1: Get access token
 async function getAccessToken() {
