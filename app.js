@@ -1,4 +1,6 @@
 // Authentication details
+import process from "node:process";
+
 const CLIENT_ID = process.env.KICK_API_KEY;
 const CLIENT_SECRET = process.env.KICK_API_SECRET;
 
