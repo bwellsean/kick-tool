@@ -1,8 +1,16 @@
 // Authentication details
-import process from "node:process";
 
-const CLIENT_ID = process.env.KICK_API_KEY;
-const CLIENT_SECRET = process.env.KICK_API_SECRET;
+// Support both Node.js and browser environments for CLIENT_ID and CLIENT_SECRET
+const CLIENT_ID =
+  (typeof process !== "undefined" && process.env && process.env.KICK_API_KEY) ||
+  (typeof window !== "undefined" && window.KICK_API_KEY) ||
+  "";
+const CLIENT_SECRET =
+  (typeof process !== "undefined" &&
+    process.env &&
+    process.env.KICK_API_SECRET) ||
+  (typeof window !== "undefined" && window.KICK_API_SECRET) ||
+  "";
 
 // Step 1: Get access token
 async function getAccessToken() {
