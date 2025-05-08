@@ -13,7 +13,7 @@ async function subscribeToChatEvents(broadcasterId) {
     }
 
     // Use the Render production URL for webhooks
-    const webhookUrl = "https://kick-tool-new.onrender.com//webhook";
+    const webhookUrl = "https://kick-tool-new.onrender.com/webhook";
     console.log(`Using webhook URL: ${webhookUrl}`);
 
     // Make the subscription request
