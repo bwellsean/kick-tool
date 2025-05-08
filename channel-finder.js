@@ -4,7 +4,8 @@ import { makeApiRequest } from "./app.js";
 async function findChannelByName(channelName) {
   try {
     // Clean up the input
-    let cleanChannelName = channelName.trim().replace(/\/$/, "");
+    let cleanChannelName = channelName.trim().replace(/\/$/, "").toLowerCase();
+    // Remove "kick.com/" if present
     if (cleanChannelName.includes("kick.com/")) {
       const urlParts = cleanChannelName.split("/");
       cleanChannelName = urlParts[urlParts.length - 1];
