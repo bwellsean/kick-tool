@@ -287,10 +287,11 @@ app.listen(PORT, () => {
   console.log(`
   🚀 Server running at http://localhost:${PORT}
 
-  Your ngrok URL: https://81df-136-37-7-242.ngrok-free.app
-  Webhook URL for Kick: https://81df-136-37-7-242.ngrok-free.app/webhook
+  Your Render URL: https://kick-tool-app-latest.onrender.com
+
+  Webhook URL for Kick: https://kick-tool-app-latest.onrender.com/webhook
 
   To test your webhook endpoint:
-  https://81df-136-37-7-242.ngrok-free.app/test-webhook
+  https://kick-tool-app-latest.onrender.com/test-webhook
   `);
 });

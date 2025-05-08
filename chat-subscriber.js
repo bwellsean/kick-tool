@@ -12,8 +12,7 @@ async function subscribeToChatEvents(broadcasterId) {
       throw new Error(`Invalid broadcaster ID: ${broadcasterId}`);
     }
 
-    // Use the ngrok URL for webhooks
-    // Replace with your CURRENT ngrok URL (it changes each time you restart ngrok)
+    // Use the Render production URL for webhooks
     const webhookUrl = "https://kick-tool-app-latest.onrender.com/webhook";
     console.log(`Using webhook URL: ${webhookUrl}`);
 

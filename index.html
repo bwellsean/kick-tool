@@ -164,8 +164,8 @@
         if (!currentBroadcasterId) return;
 
         try {
-          // Use your ngrok URL
-          const url = new URL('https://81df-136-37-7-242.ngrok-free.app/api/toxicity-stats');
+          // Use your Render production URL
+          const url = new URL('https://kick-tool-app-latest.onrender.com/api/toxicity-stats');
           url.searchParams.append('broadcaster_id', currentBroadcasterId);
 
           const response = await fetch(url.toString());
@@ -257,8 +257,8 @@
         if (!currentBroadcasterId) return;
 
         try {
-          // Use your CURRENT ngrok URL (it changes each time you restart ngrok)
-          const url = new URL('https://81df-136-37-7-242.ngrok-free.app/api/messages');
+          // Use your Render production URL
+          const url = new URL('https://kick-tool-app-latest.onrender.com/api/messages');
           url.searchParams.append('broadcaster_id', currentBroadcasterId);
 
           console.log(`Fetching messages from: ${url.toString()}`);

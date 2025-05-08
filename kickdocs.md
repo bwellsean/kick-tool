@@ -502,7 +502,7 @@ To configure your webhook, head to your Kick Developer tab located in your Accou
 
     Webhook URL: Enter a publicly accessible URL in the textbox. This is where Kick will send POST requests containing event payloads.
 
-Important: Your webhook URL must be accessible over the public internet. Localhost URLs (e.g. http://localhost:3000) won’t work unless you expose them using tools like Cloudflare Tunnel, ngrok, or similar services.
+Important: Your webhook URL must be accessible over the public internet. Localhost URLs (e.g. http://localhost:3000) won’t work unless you expose them using tools like Cloudflare Tunnel, ngrok, or similar services. For production, use your Render URL (e.g. https://kick-tool-app-latest.onrender.com/webhook).
 
 Once your webhook is enabled, you’re ready to receive events. Continue to the next section to learn how to verify event payloads using the public key, ensuring they come directly from Kick. Full payload structures and available events are detailed on the Webhook Payloads page.
 
