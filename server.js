@@ -17,6 +17,7 @@ import {
 import { analyzeToxicity } from "./perspective-client.js";
 
 // Add right after your imports
+console.log("Sever starting...");
 console.log("Loaded imports, checking functions:");
 console.log({
   addMessage: typeof addMessage,
