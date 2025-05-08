@@ -14,7 +14,7 @@ async function subscribeToChatEvents(broadcasterId) {
 
     // Use the ngrok URL for webhooks
     // Replace with your CURRENT ngrok URL (it changes each time you restart ngrok)
-    const webhookUrl = "https://kick-tool-app-latest.onrender.com/webhook";
+    const webhookUrl = "https://81df-136-37-7-242.ngrok-free.app/webhook";
     console.log(`Using webhook URL: ${webhookUrl}`);
 
     // Make the subscription request
