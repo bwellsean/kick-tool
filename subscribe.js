@@ -1,5 +1,5 @@
 // Import your existing authentication functions
-const { getAccessToken, makeApiRequest } = require("./app.js");
+import { getAccessToken, makeApiRequest } from "./app.js";
 
 async function subscribeToEvents(broadcasterUserId) {
   try {
@@ -12,6 +12,9 @@ async function subscribeToEvents(broadcasterUserId) {
         },
       ],
       method: "webhook",
+      webhook_url: process.env.EXTERNAL_URL
+        ? `${process.env.EXTERNAL_URL}webhook`
+        : "https://kick-tool-new.onrender.com/webhook",
     });
 
     console.log("Subscription created:", response);
@@ -23,9 +26,9 @@ async function subscribeToEvents(broadcasterUserId) {
 }
 
 // Example usage
-async function init() {
+async function main() {
   const broadcasterUserId = 123456; // Replace with the actual broadcaster user ID
   await subscribeToEvents(broadcasterUserId);
 }
 
-init();
+main();

@@ -282,16 +282,34 @@ app.get("/api/toxicity-stats", (req, res) => {
   }
 });
 
+// Add a new endpoint to check subscriptions
+app.get("/check-subscriptions", async (req, res) => {
+  try {
+    const { makeApiRequest } = await import("./app.js");
+    const subscriptions = await makeApiRequest("events/subscriptions", "GET");
+    res.json({
+      success: true,
+      subscriptions: subscriptions,
+    });
+  } catch (error) {
+    console.error("Error checking subscriptions:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`
   🚀 Server running at http://localhost:${PORT}
 
-  Your Render URL: https://kick-tool-app-latest.onrender.com
+  Your Render URL: https://kick-tool-new.onrender.com
 
-  Webhook URL for Kick: https://kick-tool-app-latest.onrender.com/webhook
+  Webhook URL for Kick: https://kick-tool-new.onrender.com/webhook
 
   To test your webhook endpoint:
-  https://kick-tool-app-latest.onrender.com/test-webhook
+  https://kick-tool-new.onrender.com/test-webhook
   `);
 });
