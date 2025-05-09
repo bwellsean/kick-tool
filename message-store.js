@@ -1,6 +1,6 @@
 // Simple in-memory message store
 let chatMessages = [];
-const MAX_MESSAGES = parseInt(process.env.MAX_MESSAGES || 500);
+const MAX_MESSAGES = parseInt(process.env.MAX_MESSAGES || 1000);
 // Add a new message to the store
 export function addMessage(message) {
   chatMessages.unshift(message); // Add to the beginning

@@ -133,6 +133,15 @@ app.post("/webhook", async (req, res) => {
               console.log(
                 `skipping toxicity analysis for bracketed message:, ${messageId}`
               );
+              const lowToxicityScore = {
+                toxicity: 0.1,
+                severe_toxicity: 0.01,
+                identity_attack: 0.01,
+                insult: 0.01,
+                profanity: 0.01,
+                threat: 0.01,
+              };
+              updateMessageToxicity(messageId, lowToxicityScore);
               return;
             }
 
