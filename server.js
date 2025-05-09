@@ -204,6 +204,9 @@ app.get("/test-webhook", (req, res) => {
 app.post("/test-message", (req, res) => {
   try {
     const broadcasterId = req.query.broadcaster_id || "56391418";
+    const testContent = req.query.bracketed
+      ? "[This is a test bracketed message]"
+      : `This is a test message sent at ${new Date().toLocaleTimeString()}`;
 
     // Create a test message
     const testMessage = {
@@ -213,12 +216,15 @@ app.post("/test-message", (req, res) => {
       sender_id: Math.floor(Math.random() * 10000),
       sender_name: "test_user",
       sender_display_name: "Test User",
-      content: `This is a test message sent at ${new Date().toLocaleTimeString()}`,
+      content: testContent,
       timestamp: new Date().toISOString(),
     };
 
     // Add the message to storage
     addMessage(testMessage);
+
+    // Test toxicity handling directly
+    handleToxicity(testMessage.id, testMessage.content);
 
     console.log(`Added test message for broadcaster ${broadcasterId}`);
     console.log(`Total messages: ${getMessages().length}`);
