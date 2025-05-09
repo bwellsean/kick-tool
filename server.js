@@ -129,6 +129,12 @@ app.post("/webhook", async (req, res) => {
               console.error("⚠️ updateMessageToxicity is not a function");
               return;
             }
+            if (content.startsWith("[") && content.endsWith("]")) {
+              console.log(
+                `skipping toxicity analysis for bracketed message:, ${messageId}`
+              );
+              return;
+            }
 
             const toxicityScores = await analyzeToxicity(content);
             updateMessageToxicity(messageId, toxicityScores);
